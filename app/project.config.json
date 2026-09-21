@@ -1,0 +1,18 @@
+{
+  "miniprogramRoot": "./dist/weapp",
+  "projectname": "弈境 Taro 跨端版",
+  "description": "弈境 Taro 跨端中国象棋人机对战，支持微信小程序和 H5",
+  "appid": "wxefd46abe14345b36",
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "compileHotReLoad": true,
+    "postcss": true,
+    "minified": true,
+    "useMultiFrameRuntime": true,
+    "useApiHook": true,
+    "useApiHostProcess": true
+  },
+  "compileType": "miniprogram"
+}
