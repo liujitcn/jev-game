@@ -1,8 +1,7 @@
 import { apply, check, initial, key, label, legal, replay, side } from './rules'
-import type { AiResponse, GameState, GameStats, Move, MoveRecord, ProgressEvent, RequestHandle, Side } from './types'
+import type { AiResponse, GameState, Move, MoveRecord, ProgressEvent, RequestHandle, Side } from './types'
 
 export interface GameServiceLike {
-  play: () => Promise<GameStats | null>
   move: (history: Move[], mode: 'fast' | 'deep', progress: (event: ProgressEvent) => void) => RequestHandle<AiResponse>
 }
 
@@ -19,8 +18,6 @@ export class Controller {
   mode: 'fast' | 'deep' = 'fast'
   phase = ''
   error = ''
-  stats: GameStats | null = null
-  statsError = false
   started = 0
 
   constructor(service: GameServiceLike, changed: () => void) {
@@ -34,6 +31,11 @@ export class Controller {
 
   get state(): GameState {
     return replay(this.history)
+  }
+
+  // canUndo 表示当前是否存在可回退的落子记录。
+  get canUndo(): boolean {
+    return this.history.length > 0
   }
 
   get status(): string {
@@ -67,15 +69,6 @@ export class Controller {
       return
     }
     this.commit(move)
-    this.service.play().then(stats => {
-      if (stats) {
-        this.stats = stats
-        this.notify()
-      }
-    }).catch(() => {
-      this.statsError = true
-      this.notify()
-    })
     void this.ask()
   }
 
@@ -132,14 +125,17 @@ export class Controller {
     this.busy = false
   }
 
+  // undo 回退最近一轮已落子的记录，终局后仍可使用。
   undo(): void {
-    if (!this.history.length) return
+    if (!this.canUndo) return
     this.cancel()
     const count = this.history.length % 2 ? 1 : 2
     this.history = this.history.slice(0, -count)
     this.records = this.records.slice(0, -count)
     this.board = replay(this.history).board
     this.selected = null
+    this.phase = ''
+    this.started = 0
     this.error = ''
     this.notify()
   }
@@ -151,7 +147,6 @@ export class Controller {
     this.board = initial()
     this.selected = null
     this.error = ''
-    this.statsError = false
     this.notify()
   }
 

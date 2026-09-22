@@ -136,61 +136,61 @@ page {
 .meta-card,
 .history-title,
 .recent-records,
-.stats,
 .error-panel {
   position: absolute;
 }
 
 .title-row {
-  top: calc(env(safe-area-inset-top) + 4px);
-  left: 20px;
+  top: calc(env(safe-area-inset-top) + 4PX);
+  left: 20PX;
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 10PX;
 }
 
 .title {
-  font-size: 27px;
-  line-height: 36px;
+  font-size: 36PX;
+  line-height: 44PX;
 }
 
 .subtitle {
   color: #829078;
-  font-size: 10px;
+  font-size: 16PX;
+  line-height: 22PX;
 }
 
 .status-card {
-  top: calc(env(safe-area-inset-top) + 48px);
-  left: 14px;
-  right: 14px;
-  height: 62px;
-  border-radius: 10px;
+  top: calc(env(safe-area-inset-top) + 48PX);
+  left: 14PX;
+  right: 14PX;
+  height: 78PX;
+  border-radius: 10PX;
   background: #e1e9d9;
   pointer-events: none;
 }
 
 .status-title {
   position: absolute;
-  left: 13px;
-  top: 11px;
-  max-width: calc(100% - 95px);
+  left: 13PX;
+  top: 10PX;
+  max-width: calc(100% - 105PX);
   overflow: hidden;
   white-space: nowrap;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 20PX;
+  line-height: 26PX;
   color: #395335;
 }
 
 .status-help {
   position: absolute;
-  left: 13px;
-  top: 36px;
-  right: 72px;
+  left: 13PX;
+  top: 47PX;
+  right: 13PX;
   overflow: hidden;
   white-space: nowrap;
-  color: #819074;
-  font-size: 10px;
-  line-height: 16px;
+  color: #64745d;
+  font-size: 15PX;
+  line-height: 20PX;
 }
 
 .mode-button,
@@ -200,10 +200,10 @@ page {
   border: 0;
   padding: 0;
   margin: 0;
-  border-radius: 10px;
+  border-radius: 10PX;
   color: #3e5836;
   background: #dde8d6;
-  font-size: 13px;
+  font-size: 18PX;
   line-height: 1;
   text-align: center;
   pointer-events: auto;
@@ -218,11 +218,11 @@ page {
 
 .mode-button {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 50px;
-  height: 27px;
-  line-height: 27px;
+  top: 8PX;
+  right: 8PX;
+  width: 66PX;
+  height: 36PX;
+  line-height: 36PX;
 }
 
 .disabled {
@@ -234,39 +234,43 @@ page {
   color: #a44130;
 }
 
+.result-text {
+  color: #87622f;
+}
+
 .last-move {
   left: 50%;
-  width: 180px;
-  height: 27px;
+  width: 220PX;
+  height: 34PX;
   transform: translateX(-50%);
-  border-radius: 10px;
+  border-radius: 10PX;
   background: #edf9f2;
   color: #057785;
   text-align: center;
-  line-height: 27px;
-  font-size: 12px;
+  line-height: 34PX;
+  font-size: 16PX;
 }
 
 .controls {
-  left: 14px;
-  right: 14px;
-  height: 36px;
+  left: 14PX;
+  right: 14PX;
+  height: 44PX;
   display: flex;
-  gap: 9px;
+  gap: 9PX;
 }
 
 .control-button {
   flex: 1;
-  height: 36px;
-  line-height: 36px;
+  height: 44PX;
+  line-height: 44PX;
 }
 
 .meta-card {
-  left: 14px;
-  right: 14px;
-  height: 45px;
-  padding: 0 11px;
-  border-radius: 10px;
+  left: 14PX;
+  right: 14PX;
+  height: 58PX;
+  padding: 0 11PX;
+  border-radius: 10PX;
   background: #f7f6ef;
   box-sizing: border-box;
 }
@@ -280,57 +284,57 @@ page {
 }
 
 .meta-title {
-  margin-top: 8px;
-  font-size: 11px;
-  line-height: 17px;
+  margin-top: 7PX;
+  font-size: 17PX;
+  line-height: 24PX;
 }
 
 .meta-subtitle {
-  color: #85917a;
-  font-size: 10px;
-  line-height: 15px;
+  color: #687861;
+  font-size: 14PX;
+  line-height: 20PX;
 }
 
 .history-title {
-  left: 20px;
-  right: 14px;
-  height: 25px;
-  color: #7d8a72;
-  font-size: 11px;
-  line-height: 25px;
+  left: 20PX;
+  right: 14PX;
+  height: 33PX;
+  color: #5f7059;
+  font-size: 17PX;
+  line-height: 33PX;
 }
 
 .record-button {
   position: absolute;
-  top: -5px;
+  top: -3PX;
   right: 0;
-  width: 70px;
-  height: 25px;
-  border-radius: 8px;
-  font-size: 11px;
-  line-height: 25px;
+  width: 92PX;
+  height: 33PX;
+  border-radius: 8PX;
+  font-size: 15PX;
+  line-height: 33PX;
 }
 
 .retry-button {
   left: 50%;
-  width: 84px;
-  height: 30px;
+  width: 108PX;
+  height: 40PX;
   transform: translateX(-50%);
-  border-radius: 9px;
-  line-height: 30px;
+  border-radius: 9PX;
+  line-height: 40PX;
 }
 
 .recent-records {
   left: 0;
   right: 0;
-  height: 45px;
+  height: 60PX;
 }
 
 .record-item {
   position: absolute;
   width: 50%;
-  font-size: 12px;
-  line-height: 19px;
+  font-size: 16PX;
+  line-height: 25PX;
 }
 
 .red-record {
@@ -343,28 +347,18 @@ page {
 
 .empty-history {
   display: block;
-  color: #a0a793;
+  color: #74806d;
   text-align: center;
-  font-size: 11px;
-  line-height: 30px;
-}
-
-.stats {
-  bottom: 16px;
-  left: 14px;
-  right: 14px;
-  color: #8f9983;
-  text-align: center;
-  font-size: 10px;
-  line-height: 16px;
+  font-size: 16PX;
+  line-height: 38PX;
 }
 
 .error-panel {
-  top: 100px;
-  left: 24px;
-  right: 24px;
-  padding: 24px;
-  border-radius: 12px;
+  top: 100PX;
+  left: 24PX;
+  right: 24PX;
+  padding: 24PX;
+  border-radius: 12PX;
   background: #fff5e7;
   color: #a44130;
   pointer-events: auto;

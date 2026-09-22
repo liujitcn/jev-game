@@ -90,6 +90,13 @@ function legal(board, currentSide) {
   return moves;
 }
 
+function outcome(board, currentSide) {
+  const moves = legal(board, currentSide);
+  if (moves.length) return null;
+  const winner = currentSide === 'r' ? '黑方胜' : '红方胜';
+  return `${winner} · ${check(board, currentSide) ? '将死' : '死局'}`;
+}
+
 function key(move) {
   return `${move.from}-${move.to}`;
 }
@@ -110,11 +117,12 @@ function replay(history) {
     turn = opposite(turn);
     const positionKey = JSON.stringify(board) + turn;
     seen.set(positionKey, (seen.get(positionKey) || 0) + 1);
-    if (!legal(board, turn).length) result = turn === 'r' ? '黑方胜' : '红方胜';
+    const terminal = outcome(board, turn);
+    if (terminal) result = terminal;
     else if (seen.get(positionKey) >= 3) result = '三次重复局面 · 和棋';
     else if (quiet >= 120) result = '连续 120 步未吃子 · 和棋';
   }
   return { board, turn, result };
 }
 
-module.exports = { initial, legal, key, replay, names };
+module.exports = { apply, check, initial, legal, key, names, outcome, replay, side };

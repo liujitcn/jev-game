@@ -1,10 +1,12 @@
 const http = require('node:http');
 const { URL } = require('node:url');
-const crypto = require('node:crypto');
-const { legal, key, replay } = require('./rules');
+const { analyze, candidateDescription } = require('./engine');
+const { key, replay } = require('./rules');
 
 const PORT = Number(process.env.PORT || 9000);
 const MAX_BODY_BYTES = 1024 * 1024;
+const MANAGE_CORS = process.env.MANAGE_CORS === 'true';
+const ROUTE_PREFIX = `/${String(process.env.API_ROUTE_PREFIX || 'xq').replace(/^\/+|\/+$/g, '')}`;
 const ALLOWED_ORIGINS = new Set(
   (process.env.ALLOWED_ORIGINS || 'http://localhost:10086')
     .split(',')
@@ -12,15 +14,9 @@ const ALLOWED_ORIGINS = new Set(
     .filter(Boolean)
 );
 
-// This in-memory store makes the upload package immediately testable.
-// Replace it with a CloudBase collection before production multi-instance traffic.
-const analytics = {
-  visitors: new Set(),
-  visits: 0,
-  players: new Set()
-};
 
 function setCors(req, res) {
+  if (!MANAGE_CORS) return;
   const origin = req.headers.origin;
   if (origin && ALLOWED_ORIGINS.has(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
@@ -67,19 +63,6 @@ function readBody(req) {
   });
 }
 
-function visitorCookie(req) {
-  const value = String(req.headers.cookie || '').match(/(?:^|;\s*)yijing_visitor=([^;]+)/i);
-  return value?.[1] || crypto.randomUUID();
-}
-
-function stats() {
-  return {
-    visitors: analytics.visitors.size,
-    visits: analytics.visits,
-    players: analytics.players.size
-  };
-}
-
 function writeLine(res, value) {
   res.write(`${JSON.stringify(value)}\n`);
 }
@@ -96,17 +79,19 @@ async function requestJev(history, mode, res, req) {
   const apiKey = process.env.JEV_API_KEY;
   if (!apiKey) throw new Error('缺少 JEV_API_KEY');
   const path = process.env.JEV_API_PATH || '/v1/systemone';
+  const model = process.env.JEV_MODEL || 'jev-latest';
   const target = new URL(path, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
   const state = replay(history);
-  const candidates = legal(state.board, 'b');
-  if (!candidates.length) throw new Error('当前局面没有可用的黑方走法');
-  const criteria = Object.fromEntries(candidates.map(move => [
-    key(move), `从 ${move.from} 走到 ${move.to}`
-  ]));
   const started = Date.now();
   setCors(req, res);
   res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-cache' });
   writeLine(res, { type: 'progress', phase: 'search' });
+  const analysis = analyze(state.board, mode);
+  const candidates = analysis.candidates;
+  if (!candidates.length) throw new Error('当前局面没有可用的黑方走法');
+  const criteria = Object.fromEntries(candidates.map(candidate => [
+    key(candidate.move), candidateDescription(state.board, candidate)
+  ]));
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), Number(process.env.JEV_TIMEOUT_MS || 60000));
   try {
@@ -123,13 +108,16 @@ async function requestJev(history, mode, res, req) {
           board: state.board,
           history,
           mode,
-          turn: state.turn
+          turn: state.turn,
+          boardFormat: '90 格棋盘，索引为行乘 9 加列，0 为黑方底线左侧'
         },
-        model: process.env.JEV_MODEL || 'jev-latest',
+        model,
         questions: {
           move: {
             type: 'choice',
-            instructions: '选择当前中国象棋局面下最合适的黑方走法，只能从候选走法中选择。',
+            instructions: mode === 'deep'
+              ? '你是中国象棋棋手。候选着法已经过三层搜索和强制交换延伸，请重点比较将军、兑子、预计应手和后续攻防，只能从候选中选择。'
+              : '你是中国象棋棋手。候选着法已经过两层搜索和强制交换延伸，请结合评分、吃子、将军和预计应手选择稳健着法，只能从候选中选择。',
             criteria
           }
         }
@@ -138,15 +126,16 @@ async function requestJev(history, mode, res, req) {
     if (!response.ok) throw new Error(`JEV 请求失败：HTTP ${response.status}`);
     const body = await response.json();
     const choice = body?.answers?.move?.choice;
-    const move = candidates.find(candidate => key(candidate) === choice);
-    if (!move) throw new Error('JEV 返回了不在候选列表中的走法');
+    const selected = candidates.find(candidate => key(candidate.move) === choice);
+    if (!selected) throw new Error('JEV 返回了不在候选列表中的走法');
     writeLine(res, {
       type: 'result',
       data: {
-        move,
+        move: selected.move,
         source: 'Jev',
+        model,
         duration: Date.now() - started,
-        search: { depth: 1, shortlisted: candidates.length },
+        search: { depth: analysis.depth, shortlisted: candidates.length },
         probabilities: body?.answers?.move?.probabilities || undefined
       }
     });
@@ -158,32 +147,16 @@ async function requestJev(history, mode, res, req) {
 
 async function handle(req, res) {
   const url = new URL(req.url || '/', 'http://localhost');
+  const pathname = url.pathname === ROUTE_PREFIX
+    ? '/'
+    : url.pathname.startsWith(`${ROUTE_PREFIX}/`) ? url.pathname.slice(ROUTE_PREFIX.length) : url.pathname;
   if (req.method === 'OPTIONS') {
     setCors(req, res);
     res.writeHead(204);
     res.end();
     return;
   }
-  if (url.pathname === '/api/stats' && req.method === 'GET') {
-    sendJson(req, res, 200, stats());
-    return;
-  }
-  const visitor = visitorCookie(req);
-  if (url.pathname === '/api/analytics' && req.method === 'POST') {
-    const body = await readBody(req);
-    if (body.kind === 'visit') {
-      analytics.visits += 1;
-      analytics.visitors.add(visitor);
-    } else if (body.kind === 'play') {
-      analytics.players.add(visitor);
-    } else {
-      sendError(req, res, 400, 'kind 必须是 visit 或 play');
-      return;
-    }
-    sendJson(req, res, 200, stats(), `yijing_visitor=${visitor}`);
-    return;
-  }
-  if (url.pathname === '/api/move' && req.method === 'POST') {
+  if (pathname === '/api/move' && req.method === 'POST') {
     const body = await readBody(req);
     if (!Array.isArray(body.history)) {
       sendError(req, res, 400, 'history 必须是数组');
@@ -215,9 +188,15 @@ async function handle(req, res) {
   sendError(req, res, 404, '接口不存在');
 }
 
-http.createServer((req, res) => {
-  handle(req, res).catch(error => {
-    if (!res.headersSent) sendError(req, res, 500, error instanceof Error ? error.message : '服务异常');
-    else res.end();
+function createServer() {
+  return http.createServer((req, res) => {
+    handle(req, res).catch(error => {
+      if (!res.headersSent) sendError(req, res, 500, error instanceof Error ? error.message : '服务异常');
+      else res.end();
+    });
   });
-}).listen(PORT, '0.0.0.0');
+}
+
+if (require.main === module) createServer().listen(PORT, '0.0.0.0');
+
+module.exports = { createServer, handle };

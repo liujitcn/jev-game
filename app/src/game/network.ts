@@ -1,16 +1,9 @@
 import Taro from '@tarojs/taro'
 
 import { API_ORIGIN } from './config'
-import type { AiResponse, GameStats, ProgressEvent, RequestHandle } from './types'
+import type { AiResponse, ProgressEvent, RequestHandle } from './types'
 
 type JsonRecord = Record<string, unknown>
-
-function uuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => {
-    const random = Math.random() * 16 | 0
-    return (char === 'x' ? random : (random & 3) | 8).toString(16)
-  })
-}
 
 function asRecord(value: unknown): JsonRecord | null {
   return value !== null && typeof value === 'object' ? value as JsonRecord : null
@@ -50,14 +43,6 @@ export class LineStream {
 }
 
 export class GameService {
-  cookie: string
-  ready: Promise<GameStats> | null = null
-  played = false
-
-  constructor() {
-    this.cookie = Taro.getStorageSync<string>('yijing-visitor-cookie') || ''
-  }
-
   request<T>(path: string, body?: JsonRecord, onProgress?: (event: ProgressEvent) => void): RequestHandle<T> {
     let cancelled = false
     let abortController: AbortController | null = null
@@ -78,14 +63,6 @@ export class GameService {
           if (record.type === 'result') result = record.data as T
           if (record.type !== 'result' && typeof record.error === 'string') streamError = new Error(record.error)
         })
-        const handleHeaders = (headers: Record<string, string>) => {
-          const value = headers['Set-Cookie'] || headers['set-cookie'] || ''
-          const match = value.match(/yijing_visitor=([a-f\d-]+)/i)
-          if (match) {
-            this.cookie = match[0]
-            Taro.setStorageSync('yijing-visitor-cookie', this.cookie)
-          }
-        }
         requestTask = Taro.request({
           url: API_ORIGIN + path,
           method: body ? 'POST' : 'GET',
@@ -94,7 +71,6 @@ export class GameService {
           header: {
             'Content-Type': 'application/json',
             Origin: API_ORIGIN,
-            Cookie: this.cookie,
             Accept: onProgress ? 'application/x-ndjson' : 'application/json'
           },
           enableChunked: Boolean(onProgress),
@@ -102,7 +78,6 @@ export class GameService {
           success: response => {
             try {
               if (cancelled) return reject(new Error('已取消'))
-              handleHeaders(response.header)
               if (onProgress) {
                 if (!chunked && response.data) parser.write(response.data as ArrayBuffer)
                 parser.end()
@@ -121,7 +96,6 @@ export class GameService {
           },
           fail: error => reject(streamError || new Error(cancelled ? '已取消' : `网络请求失败：${error.errMsg || '请检查合法域名和网络'}`))
         })
-        if (requestTask.onHeadersReceived) requestTask.onHeadersReceived(response => handleHeaders(response.header))
         if (onProgress && requestTask.onChunkReceived) {
           requestTask.onChunkReceived(({ data }) => {
             try {
@@ -195,28 +169,10 @@ export class GameService {
     return result
   }
 
-  visit(): Promise<GameStats> {
-    this.ready = this.request<GameStats>('/api/analytics', { id: uuid(), kind: 'visit' }).promise
-    return this.ready
-  }
-
-  async play(): Promise<GameStats | null> {
-    if (this.played) return null
-    this.played = true
-    try {
-      await this.ready
-      return await this.request<GameStats>('/api/analytics', { id: uuid(), kind: 'play' }).promise
-    } catch (error) {
-      this.played = false
-      throw error
-    }
-  }
-
   move(history: unknown[], mode: 'fast' | 'deep', progress: (event: ProgressEvent) => void): RequestHandle<AiResponse> {
     let request: RequestHandle<AiResponse> | null = null
     let cancelled = false
     const promise = (async () => {
-      await this.ready
       if (cancelled) throw new Error('已取消')
       request = this.request<AiResponse>('/api/move', { history, mode }, progress)
       return await request.promise

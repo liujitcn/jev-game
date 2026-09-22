@@ -7,14 +7,14 @@
 ```bash
 pnpm install
 pnpm test
-pnpm build:h5       # dist/h5
+pnpm build          # dist/h5
 pnpm build:weapp    # dist/weapp
 ```
 
 H5 开发：
 
 ```bash
-pnpm dev:h5
+pnpm dev
 ```
 
 微信小程序开发：
@@ -31,15 +31,22 @@ pnpm dev:weapp
 - `src/game/controller.ts`：人机对局状态、悔棋、重开和 AI 结果校验。
 - `src/game/network.ts`：微信 `Taro.request` 与浏览器 `fetch` 的网络适配，复用现有 CloudBase HTTPS API。
 - `src/pages/index/`：平面棋盘、棋子、落子标记和跨端交互布局。
-- `src/pages/index/`：跨端页面 HUD 和交互布局。
 - `static/`：棋盘和棋子纹理；构建时分别复制到 `dist/h5/static/assets/` 和 `dist/weapp/static/assets/`。
 
 ## API 与 H5 注意事项
 
-默认 API 地址来自原项目：
+默认 API 根地址包含 CloudBase HTTP 路由 `/xq`：
 
-`https://achang-d0gimipc60590a0f5-1256158283.ap-shanghai.app.tcloudbase.com`
+```text
+https://liujitcn-d1glvo3kn8aad94c1-1256748449.ap-shanghai.app.tcloudbase.com/xq
+```
 
-可通过 `TARO_APP_API_ORIGIN` 覆盖。H5 请求使用 `fetch`、`credentials: include` 和流式响应，因此服务端需要允许当前 H5 域名的 CORS，并允许携带访客 Cookie。微信小程序仍需在后台配置 request 合法域名。
+可通过 `TARO_APP_API_ORIGIN` 覆盖，值末尾不要添加 `/`，网络层会继续拼接 `/api/move`：
+
+```bash
+TARO_APP_API_ORIGIN=https://example.ap-shanghai.app.tcloudbase.com/xq pnpm build
+```
+
+H5 使用 `fetch` 读取 NDJSON 流式响应，CloudBase `/xq` 路由需要启用当前 H5 来源的跨域访问。微信小程序仍需在后台配置该 CloudBase 域名为 request 合法域名。
 
 客户端不包含模型、数据库或 CloudBase 管理密钥。

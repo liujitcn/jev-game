@@ -25,13 +25,13 @@ function getSystemInfo(): SystemInfo {
 function getLayout(): Layout {
   const info = getSystemInfo()
   const top = info.safeArea?.top || info.statusBarHeight || 20
-  const boardTop = top + 113
-  const availableHeight = Math.max(190, info.windowHeight - boardTop - 224)
+  const boardTop = top + 134
+  const availableHeight = Math.max(190, info.windowHeight - boardTop - 270)
   const boardWidth = Math.min(Math.max(190 * 10 / 11, availableHeight / 1.1), Math.max(190, info.windowWidth - 28))
   const boardHeight = boardWidth * 1.1
-  const controlsTop = boardTop + boardHeight + 2
-  const metaTop = controlsTop + 46
-  const historyTop = metaTop + 55
+  const controlsTop = boardTop + boardHeight + 4
+  const metaTop = controlsTop + 53
+  const historyTop = metaTop + 68
   return { top, boardTop, boardWidth, boardHeight, controlsTop, metaTop, historyTop }
 }
 
@@ -87,13 +87,6 @@ export default function Index() {
     serviceRef.current = service
     gameRef.current = game
     notify()
-    service.visit().then(stats => {
-      game.stats = stats
-      game.notify()
-    }).catch(() => {
-      game.statsError = true
-      game.notify()
-    })
   })
 
   useEffect(() => {
@@ -131,23 +124,10 @@ export default function Index() {
     ? (['r', 'b'] as const).filter(side => check(game.board, side))
     : []
   const status = game?.status || '正在初始化棋盘'
-  const statusText = status.length > 18 ? `${status.slice(0, 18)}…` : status
+  const statusText = state?.result || (status.length > 18 ? `${status.slice(0, 18)}…` : status)
 
   const retry = () => {
-    if (!game) return
-    if (game.statsError && serviceRef.current) {
-      serviceRef.current.visit().then(stats => {
-        game.stats = stats
-        game.statsError = false
-        void game.ask()
-        game.notify()
-      }).catch(() => {
-        game.error = '云服务未连接，请检查网络和合法域名'
-        game.notify()
-      })
-    } else {
-      void game.ask()
-    }
+    if (game) void game.ask()
   }
 
   const toggleMode = () => {
@@ -199,37 +179,37 @@ export default function Index() {
           <Text className='subtitle'>JEV / 中国象棋</Text>
         </View>
         <View className='status-card'>
-          <Button className={`mode-button ${game?.busy ? 'disabled' : ''}`} disabled={Boolean(game?.busy)} onClick={toggleMode}>{game?.mode === 'deep' ? '深思' : '快速'}</Button>
-          <Text className={`status-title ${game?.error ? 'error-text' : ''}`}>{statusText}</Text>
+          <Button className={`mode-button ${game?.busy ? 'disabled' : ''}`} onClick={toggleMode}>{game?.mode === 'deep' ? '深思' : '快速'}</Button>
+          <Text className={`status-title ${game?.error ? 'error-text' : state?.result ? 'result-text' : ''}`}>{statusText}</Text>
           <Text className='status-help'>
             {game?.busy
               ? `已等待 ${((Date.now() - game.started) / 1000).toFixed(1)} 秒 · 可悔棋或重开`
               : game?.error
                 ? '点击下方重试；也可以悔棋或重新开局'
-                : '你执红先行 · 点选棋子，再点亮起的落点'}
+                : state?.result
+                  ? '本局已结束 · 仍可悔棋或重新开局'
+                  : '你执红先行 · 点棋子，再点落点'}
           </Text>
         </View>
         {last?.side === 'b' && <View className='last-move' style={{ top: `${layout.boardTop + 4}px` }}><Text>黑方刚走 · {last.notation}</Text></View>}
         <View className='controls' style={{ top: `${layout.controlsTop}px` }}>
-          <Button className={`control-button ${!game?.history.length ? 'disabled' : ''}`} disabled={!game?.history.length} onClick={() => game?.undo()}>↶ 悔棋</Button>
+          <Button className={`control-button ${!game?.canUndo ? 'disabled' : ''}`} disabled={!game?.canUndo} onClick={() => game?.undo()}>↶ 悔棋</Button>
           <Button className='control-button' onClick={() => game?.restart()}>↻ 重开</Button>
         </View>
         <View className='meta-card' style={{ top: `${layout.metaTop}px` }}>
-          <Text className='meta-title'>{latestAi ? `${latestAi.source} · ${(latestAi.duration / 1000).toFixed(1)}秒` : 'Jev 与博弈搜索，共同选择下一步'}</Text>
-          <Text className='meta-subtitle'>{latestAi?.search ? `推演 ${latestAi.search.depth} 层 · ${latestAi.search.shortlisted} 个候选` : '保留完整攻防校验，密钥仅存服务端'}</Text>
+          <Text className='meta-title'>{latestAi ? `${latestAi.source}${latestAi.model ? ` · ${latestAi.model}` : ''} · ${(latestAi.duration / 1000).toFixed(1)}秒` : 'Jev 模型待命'}</Text>
+          <Text className='meta-subtitle'>{latestAi?.search ? `搜索 ${latestAi.search.depth} 层 · 候选 ${latestAi.search.shortlisted} 个` : '模型从服务端搜索候选中选择，密钥仅存服务端'}</Text>
         </View>
         <View className='history-title' style={{ top: `${layout.historyTop}px` }}>
           <Text>最近棋谱</Text>
           <Button className='record-button' onClick={showRecord}>全部棋谱</Button>
         </View>
-        {!game?.busy && state?.turn === 'b' && !state.result && <Button className='retry-button' style={{ top: `${layout.historyTop + 32}px` }} onClick={retry}>重试 AI</Button>}
-        {(game?.busy || state?.turn !== 'b' || state.result) && <View className='recent-records' style={{ top: `${layout.historyTop + 27}px` }}>
+        {!game?.busy && state?.turn === 'b' && !state.result && <Button className='retry-button' style={{ top: `${layout.historyTop + 39}px` }} onClick={retry}>重试 AI</Button>}
+        {(game?.busy || state?.turn !== 'b' || state.result) && <View className='recent-records' style={{ top: `${layout.historyTop + 35}px` }}>
           {!recent.length && <Text className='empty-history'>好棋，从第一步开始。</Text>}
-          {recent.map((record, index) => <Text key={`${record.time}-${index}`} className={`record-item ${record.side === 'r' ? 'red-record' : 'black-record'}`} style={{ left: `${20 + (index % 2) * 50}%`, top: `${Math.floor(index / 2) * 19}px` }}>{`${gameRecords.length - recent.length + index + 1}. ${record.notation}`}</Text>)}
+          {recent.map((record, index) => <Text key={`${record.time}-${index}`} className={`record-item ${record.side === 'r' ? 'red-record' : 'black-record'}`} style={{ left: `${20 + (index % 2) * 50}%`, top: `${Math.floor(index / 2) * 26}px` }}>{`${gameRecords.length - recent.length + index + 1}. ${record.notation}`}</Text>)}
         </View>}
-        <Text className='stats'>
-          {game?.stats ? `访问 ${game.stats.visitors} 人 · ${game.stats.visits} 次 · ${game.stats.players} 人玩过` : game?.statsError ? '统计暂不可用' : '正在连接云端统计…'}
-        </Text>
+
       </View>
     </View>
   )

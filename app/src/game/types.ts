@@ -25,15 +25,10 @@ export interface AiSearchInfo {
 
 export interface AiResponse {
   source: string
+  model?: string
   duration: number
   search?: AiSearchInfo
   move: Move
-}
-
-export interface GameStats {
-  visitors: number
-  visits: number
-  players: number
 }
 
 export interface GameState {
