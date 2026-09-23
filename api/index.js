@@ -6,7 +6,6 @@ const { key, replay } = require('./rules');
 const PORT = Number(process.env.PORT || 9000);
 const MAX_BODY_BYTES = 1024 * 1024;
 const MANAGE_CORS = process.env.MANAGE_CORS === 'true';
-const ROUTE_PREFIX = `/${String(process.env.API_ROUTE_PREFIX || 'xq').replace(/^\/+|\/+$/g, '')}`;
 const ALLOWED_ORIGINS = new Set(
   (process.env.ALLOWED_ORIGINS || 'http://localhost:10086')
     .split(',')
@@ -147,16 +146,13 @@ async function requestJev(history, mode, res, req) {
 
 async function handle(req, res) {
   const url = new URL(req.url || '/', 'http://localhost');
-  const pathname = url.pathname === ROUTE_PREFIX
-    ? '/'
-    : url.pathname.startsWith(`${ROUTE_PREFIX}/`) ? url.pathname.slice(ROUTE_PREFIX.length) : url.pathname;
   if (req.method === 'OPTIONS') {
     setCors(req, res);
     res.writeHead(204);
     res.end();
     return;
   }
-  if (pathname === '/api/move' && req.method === 'POST') {
+  if (url.pathname === '/api/game/move' && req.method === 'POST') {
     const body = await readBody(req);
     if (!Array.isArray(body.history)) {
       sendError(req, res, 400, 'history 必须是数组');

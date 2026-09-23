@@ -43,7 +43,7 @@ test('move 接口只把搜索后的黑方候选交给 Jev', async t => {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise(resolve => server.close(resolve)));
   const address = server.address();
-  const response = await postJson(`http://127.0.0.1:${address.port}`, '/xq/api/move', {
+  const response = await postJson(`http://127.0.0.1:${address.port}`, '/api/game/move', {
     history: [{ from: 54, to: 45 }],
     mode: 'deep'
   });

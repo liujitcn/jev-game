@@ -10,12 +10,11 @@ JEV_API_PATH=/v1/systemone
 JEV_API_KEY=模型 API Key
 JEV_MODEL=jev-latest
 JEV_TIMEOUT_MS=60000
-API_ROUTE_PREFIX=xq
 MANAGE_CORS=false
 ALLOWED_ORIGINS=http://localhost:10086
 ```
 
-线上路由挂载在 `/xq`，服务端会通过 `API_ROUTE_PREFIX` 剥离该前缀后再匹配内部接口。CloudBase HTTP 访问服务已启用跨域时保持 `MANAGE_CORS=false`，避免网关和应用重复生成 `Access-Control-Allow-Origin`。只有本地直接运行 API 且没有网关处理跨域时才设置 `MANAGE_CORS=true`，并通过 `ALLOWED_ORIGINS` 配置允许来源。
+CloudBase HTTP 访问服务已启用跨域时保持 `MANAGE_CORS=false`，避免网关和应用重复生成 `Access-Control-Allow-Origin`。只有本地直接运行 API 且没有网关处理跨域时才设置 `MANAGE_CORS=true`，并通过 `ALLOWED_ORIGINS` 配置允许来源。
 
 CloudBase HTTP 云函数的执行超时必须在控制台设置为至少 `30` 秒；`JEV_TIMEOUT_MS` 只控制对模型服务的请求，不能替代云函数自身的执行超时配置。
 
@@ -42,7 +41,8 @@ scf_bootstrap
 不需要上传 `node_modules`。HTTP 访问服务配置：
 
 ```text
-路由：/xq
+路由：/api/game
+路径透传：开启
 资源类型：云函数 HTTP
 资源对象：当前云函数
 跨域：开启
@@ -52,13 +52,12 @@ scf_bootstrap
 
 ```bash
 curl -X POST \
-  'https://liujitcn-d1glvo3kn8aad94c1-1256748449.ap-shanghai.app.tcloudbase.com/xq/api/move' \
+  'https://liujitcn-d1glvo3kn8aad94c1-1256748449.ap-shanghai.app.tcloudbase.com/api/game/move' \
   -H 'Content-Type: application/json' \
   --data '{"history":[{"from":54,"to":45}],"mode":"fast"}'
 ```
 
 ## 接口
 
-- 公网：`POST /xq/api/move`
-- 云函数内部：`POST /api/move`
+- 公网与云函数内部：`POST /api/game/move`
 - body：`{ "history": [], "mode": "fast" | "deep" }`

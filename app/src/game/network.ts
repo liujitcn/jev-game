@@ -174,7 +174,7 @@ export class GameService {
     let cancelled = false
     const promise = (async () => {
       if (cancelled) throw new Error('已取消')
-      request = this.request<AiResponse>('/api/move', { history, mode }, progress)
+      request = this.request<AiResponse>('/api/game/move', { history, mode }, progress)
       return await request.promise
     })()
     return {
